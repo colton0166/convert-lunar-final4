@@ -5,94 +5,143 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>國曆轉農曆系統</title>
     <style>
-        body { text-align: center; font-family: Arial, sans-serif; padding: 20px; }
-        select, button { margin: 5px; padding: 5px; font-size: 16px; }
-        #result { margin-top: 20px; font-size: 18px; }
-        footer { margin-top: 40px; font-size: 14px; color: gray; }
+        body {
+            font-family: "Noto Sans TC", sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        select, button {
+            margin: 0.5rem;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
+        footer {
+            margin-top: 2rem;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
-    <h1>國曆轉農曆系統</h1>
-    <div>
-        <select id="year"></select>
-        <select id="month"></select>
-        <select id="day"></select>
+
+    <div class="container">
+        <h1>國曆轉農曆系統</h1>
+        <div>
+            <select id="year"></select>
+            <select id="month"></select>
+            <select id="day"></select>
+        </div>
+        <div class="result" id="result">請選擇日期</div>
     </div>
 
-    <div id="result"></div>
+    <footer>
+        由 崇益 製作 © 2025
+    </footer>
 
-    <footer>由 崇益 製作 ￠ 2025</footer>
+<script>
+const yearSelect = document.getElementById('year');
+const monthSelect = document.getElementById('month');
+const daySelect = document.getElementById('day');
+const resultDiv = document.getElementById('result');
 
-    <script>
-        // 設定年分（1920-2025）
-        const yearSelect = document.getElementById('year');
-        for (let y = 1920; y <= 2025; y++) {
-            let option = document.createElement('option');
-            option.value = y;
-            option.text = y + '年';
-            yearSelect.appendChild(option);
+// 初始化年份
+for (let y = 1920; y <= 2025; y++) {
+    const option = document.createElement('option');
+    option.value = y;
+    option.textContent = `${y}年`;
+    yearSelect.appendChild(option);
+}
+
+// 初始化月份
+for (let m = 1; m <= 12; m++) {
+    const option = document.createElement('option');
+    option.value = m;
+    option.textContent = `${m}月`;
+    monthSelect.appendChild(option);
+}
+
+// 根據選擇更新天數
+function updateDays() {
+    const year = parseInt(yearSelect.value);
+    const month = parseInt(monthSelect.value);
+    let days = 31;
+    if (month === 2) {
+        days = (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28;
+    } else if ([4, 6, 9, 11].includes(month)) {
+        days = 30;
+    }
+    daySelect.innerHTML = '';
+    for (let d = 1; d <= days; d++) {
+        const option = document.createElement('option');
+        option.value = d;
+        option.textContent = `${d}日`;
+        daySelect.appendChild(option);
+    }
+}
+
+// 自動換算農曆
+function autoConvert() {
+    const year = yearSelect.value;
+    const month = monthSelect.value;
+    const day = daySelect.value;
+
+    fetch('/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year, month, day })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.lunar) {
+            resultDiv.innerHTML = `農曆：${data.lunar}<br>歲次：${data.suici}<br>生肖：${data.zodiac}`;
+        } else {
+            resultDiv.textContent = '查詢失敗，請稍後再試';
         }
+    })
+    .catch(() => {
+        resultDiv.textContent = '查詢失敗，請稍後再試';
+    });
+}
 
-        // 設定月
-        const monthSelect = document.getElementById('month');
-        for (let m = 1; m <= 12; m++) {
-            let option = document.createElement('option');
-            option.value = m;
-            option.text = m + '月';
-            monthSelect.appendChild(option);
-        }
+// 初始化與事件綁定
+updateDays();
 
-        // 設定日
-        const daySelect = document.getElementById('day');
-        function updateDays() {
-            daySelect.innerHTML = '';
-            const year = parseInt(yearSelect.value);
-            const month = parseInt(monthSelect.value);
-            let daysInMonth = new Date(year, month, 0).getDate();
-            for (let d = 1; d <= daysInMonth; d++) {
-                let option = document.createElement('option');
-                option.value = d;
-                option.text = d + '日';
-                daySelect.appendChild(option);
-            }
-        }
-        monthSelect.addEventListener('change', updateDays);
-        yearSelect.addEventListener('change', updateDays);
-        updateDays();
+yearSelect.addEventListener('change', () => { updateDays(); autoConvert(); });
+monthSelect.addEventListener('change', () => { updateDays(); autoConvert(); });
+daySelect.addEventListener('change', autoConvert);
 
-        // 變書
-        function fetchLunar() {
-            const year = yearSelect.value;
-            const month = monthSelect.value;
-            const day = daySelect.value;
+</script>
 
-            fetch('/convert', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ year, month, day })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    document.getElementById('result').innerHTML = '<span style="color:red;">' + data.error + '</span>';
-                } else {
-                    document.getElementById('result').innerHTML = 
-                        '<div> 農曆：' + data.lunar + '</div>' +
-                        '<div> 歲次：' + data.suici + '</div>' +
-                        '<div> 生肖：' + data.zodiac + '</div>' +
-                        (data.leap ? '<div style="color:blue;">（闕月）</div>' : '');
-                }
-            })
-            .catch(error => {
-                document.getElementById('result').innerHTML = '<span style="color:red;"> 查詢失敗，請繼續嘗試 </span>';
-            });
-        }
-
-        yearSelect.addEventListener('change', fetchLunar);
-        monthSelect.addEventListener('change', fetchLunar);
-        daySelect.addEventListener('change', fetchLunar);
-    </script>
 </body>
 </html>
