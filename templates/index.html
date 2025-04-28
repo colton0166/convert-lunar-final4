@@ -2,93 +2,77 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>國曆轉農曆系統（動態日數版）</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 320px; text-align: center; }
-        select, .result { margin-top: 10px; width: 100%; font-size: 16px; padding: 8px; }
-        .result { background: #fafafa; border-radius: 8px; border: 1px solid #ddd; min-height: 60px; display: flex; flex-direction: column; justify-content: center; margin-top: 20px; }
-    </style>
+    <title>國曆轉農曆系統</title>
 </head>
 <body>
-    <div class="container">
-        <h2>國曆轉農曆系統</h2>
-        <select id="year"></select>
-        <select id="month"></select>
-        <select id="day"></select>
-        <div class="result" id="resultBox">
-            <p>請選擇日期</p>
-        </div>
+    <h1 style="text-align:center;">國曆轉農曆系統</h1>
+
+    <div style="text-align:center; margin-top: 20px;">
+        <select id="year">
+            <option value="">選擇年份</option>
+            <!-- 自己插入1910~2025的年份選單（或用js自動生成也可以） -->
+        </select>
+
+        <select id="month">
+            <option value="">選擇月份</option>
+            <!-- 自己插入1~12月 -->
+        </select>
+
+        <select id="day">
+            <option value="">選擇日期</option>
+            <!-- 自己插入1~31日 -->
+        </select>
     </div>
 
-<script>
+    <div id="result" style="text-align:center; margin-top: 30px; font-size: 18px;"></div>
+
+    <footer style="text-align:center; margin-top: 50px; font-size: 14px; color: gray;">
+        由 崇益 製作 © 2025
+    </footer>
+
+    <script>
+    // 這裡幫你自動生成年份、月份、日期
     const yearSelect = document.getElementById('year');
     const monthSelect = document.getElementById('month');
     const daySelect = document.getElementById('day');
-    const resultBox = document.getElementById('resultBox');
 
     for (let y = 1910; y <= 2025; y++) {
-        let option = document.createElement('option');
-        option.value = y;
-        option.text = y + '年';
-        yearSelect.appendChild(option);
+        yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
     }
 
     for (let m = 1; m <= 12; m++) {
-        let option = document.createElement('option');
-        option.value = m;
-        option.text = m + '月';
-        monthSelect.appendChild(option);
+        monthSelect.innerHTML += `<option value="${m}">${m}</option>`;
     }
 
-    function updateDays() {
-        const year = parseInt(yearSelect.value);
-        const month = parseInt(monthSelect.value);
-        daySelect.innerHTML = '';
-
-        let daysInMonth = 31;
-        if (month === 4 || month === 6 || month === 9 || month === 11) {
-            daysInMonth = 30;
-        } else if (month === 2) {
-            daysInMonth = (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28;
-        }
-
-        for (let d = 1; d <= daysInMonth; d++) {
-            let option = document.createElement('option');
-            option.value = d;
-            option.text = d + '日';
-            daySelect.appendChild(option);
-        }
+    for (let d = 1; d <= 31; d++) {
+        daySelect.innerHTML += `<option value="${d}">${d}</option>`;
     }
 
-    function update() {
+    function fetchLunarDate() {
         const year = yearSelect.value;
         const month = monthSelect.value;
         const day = daySelect.value;
+
         if (year && month && day) {
             fetch('/convert', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ year, month, day })
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({year, month, day})
             })
             .then(response => response.json())
             .then(data => {
-                resultBox.innerHTML = `<p>農曆：${data.lunar}</p><p>歲次：${data.suici}</p><p>生肖：${data.zodiac}</p>`;
+                document.getElementById('result').innerHTML = `
+                    農曆：${data.lunar}<br>
+                    歲次：${data.suici}<br>
+                    生肖：${data.zodiac}
+                `;
             });
         }
     }
 
-    yearSelect.addEventListener('change', () => { updateDays(); update(); });
-    monthSelect.addEventListener('change', () => { updateDays(); update(); });
-    daySelect.addEventListener('change', update);
-
-    // 初始化
-    updateDays();
-</script>
-<footer style="text-align:center; margin-top: 20px; font-size: 14px; color: gray;">
-    由 崇益 製作 © 2025
-</footer>
-
+    yearSelect.addEventListener('change', fetchLunarDate);
+    monthSelect.addEventListener('change', fetchLunarDate);
+    daySelect.addEventListener('change', fetchLunarDate);
+    </script>
 </body>
 </html>
