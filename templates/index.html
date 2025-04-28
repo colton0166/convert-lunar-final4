@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>國曆轉農曆系統</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-        select, button { font-size: 18px; padding: 5px; margin: 5px; }
-        .result { margin-top: 20px; font-size: 20px; }
+        body { text-align: center; font-family: Arial, sans-serif; padding: 20px; }
+        select, button { margin: 5px; padding: 5px; font-size: 16px; }
+        #result { margin-top: 20px; font-size: 18px; }
         footer { margin-top: 40px; font-size: 14px; color: gray; }
     </style>
 </head>
@@ -18,56 +18,50 @@
         <select id="month"></select>
         <select id="day"></select>
     </div>
-    <div class="result" id="result"></div>
 
-    <footer>
-        由 崇益 製作 © 2025
-    </footer>
+    <div id="result"></div>
+
+    <footer>由 崇益 製作 ￠ 2025</footer>
 
     <script>
+        // 設定年分（1920-2025）
         const yearSelect = document.getElementById('year');
-        const monthSelect = document.getElementById('month');
-        const daySelect = document.getElementById('day');
-        const resultDiv = document.getElementById('result');
-
-        // 生成年份
-        for (let y = 1910; y <= 2025; y++) {
-            const option = document.createElement('option');
+        for (let y = 1920; y <= 2025; y++) {
+            let option = document.createElement('option');
             option.value = y;
-            option.text = `${y}年`;
+            option.text = y + '年';
             yearSelect.appendChild(option);
         }
 
-        // 生成月份
+        // 設定月
+        const monthSelect = document.getElementById('month');
         for (let m = 1; m <= 12; m++) {
-            const option = document.createElement('option');
+            let option = document.createElement('option');
             option.value = m;
-            option.text = `${m}月`;
+            option.text = m + '月';
             monthSelect.appendChild(option);
         }
 
-        // 根據月份更新天數
+        // 設定日
+        const daySelect = document.getElementById('day');
         function updateDays() {
+            daySelect.innerHTML = '';
             const year = parseInt(yearSelect.value);
             const month = parseInt(monthSelect.value);
-            const daysInMonth = new Date(year, month, 0).getDate();
-            daySelect.innerHTML = '';
+            let daysInMonth = new Date(year, month, 0).getDate();
             for (let d = 1; d <= daysInMonth; d++) {
-                const option = document.createElement('option');
+                let option = document.createElement('option');
                 option.value = d;
-                option.text = `${d}日`;
+                option.text = d + '日';
                 daySelect.appendChild(option);
             }
         }
-
-        yearSelect.addEventListener('change', updateDays);
         monthSelect.addEventListener('change', updateDays);
-
-        // 初始更新
+        yearSelect.addEventListener('change', updateDays);
         updateDays();
 
-        // 自動送出查詢
-        function fetchData() {
+        // 變書
+        function fetchLunar() {
             const year = yearSelect.value;
             const month = monthSelect.value;
             const day = daySelect.value;
@@ -81,19 +75,24 @@
             })
             .then(response => response.json())
             .then(data => {
-                resultDiv.innerHTML = `農曆：${data.lunar}<br>歲次：${data.suici}<br>生肖：${data.zodiac}`;
+                if (data.error) {
+                    document.getElementById('result').innerHTML = '<span style="color:red;">' + data.error + '</span>';
+                } else {
+                    document.getElementById('result').innerHTML = 
+                        '<div> 農曆：' + data.lunar + '</div>' +
+                        '<div> 歲次：' + data.suici + '</div>' +
+                        '<div> 生肖：' + data.zodiac + '</div>' +
+                        (data.leap ? '<div style="color:blue;">（闕月）</div>' : '');
+                }
             })
             .catch(error => {
-                resultDiv.innerHTML = '查詢失敗，請稍後再試';
+                document.getElementById('result').innerHTML = '<span style="color:red;"> 查詢失敗，請繼續嘗試 </span>';
             });
         }
 
-        yearSelect.addEventListener('change', fetchData);
-        monthSelect.addEventListener('change', fetchData);
-        daySelect.addEventListener('change', fetchData);
-
-        // 預設載入一次
-        fetchData();
+        yearSelect.addEventListener('change', fetchLunar);
+        monthSelect.addEventListener('change', fetchLunar);
+        daySelect.addEventListener('change', fetchLunar);
     </script>
 </body>
 </html>
