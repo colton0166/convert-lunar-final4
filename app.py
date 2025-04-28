@@ -65,7 +65,7 @@ def convert():
         else:
             lunar_date = ZhDate.from_datetime(datetime.datetime(year, month, day))
 
-        if lunar_date.lunar_month_name.startswith("閏"):
+        if is_leap:
             month_str = f"閏{number_to_chinese(lunar_date.lunar_month)}月"
         else:
             month_str = f"{number_to_chinese(lunar_date.lunar_month)}月"
