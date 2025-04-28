@@ -77,7 +77,7 @@ def convert():
         return jsonify({'lunar': lunar_str, 'suici': suici, 'zodiac': zodiac})
 
     except Exception as e:
-        return jsonify({'error': '查詢失敗，請繼續嘗試'}), 500
+        return jsonify({'error': '查詢失敗，請稍後再試'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
