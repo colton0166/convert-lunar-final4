@@ -1,130 +1,155 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>國曆轉農曆系統</title>
-  <style>
-    body { font-family: "Noto Sans TC", sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-    .container { background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
-    select { margin: 0.5rem; padding: 0.5rem; font-size: 1rem; border-radius: 6px; border: 1px solid #ccc; }
-    .result { margin-top: 1.5rem; font-size: 1.2rem; background: #e9ecef; padding: 1rem; border-radius: 8px; }
-    footer { margin-top: 2rem; font-size: 0.8rem; color: #777; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>國曆轉農曆系統</title>
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f4f6f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 {
+            font-size: 26px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        select, button {
+            font-size: 16px;
+            margin: 8px;
+            padding: 10px;
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            background: #e0e7ef;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #777;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>國曆轉農曆系統</h1>
+        <select id="year"></select>
+        <select id="month"></select>
+        <select id="day"></select>
 
-<div class="container">
-  <h1>國曆轉農曆系統</h1>
-  <div>
-    <select id="year"></select>
-    <select id="month"></select>
-    <select id="day"></select>
-  </div>
-  <div class="result" id="result">請選擇日期</div>
-</div>
+        <div id="result" class="result" style="display:none;"></div>
+    </div>
 
-<footer>由 崇益 製作 © 2025</footer>
+    <footer>
+        由 崇益 製作 © 2025
+    </footer>
 
-<script>
-const yearSelect = document.getElementById('year');
-const monthSelect = document.getElementById('month');
-const daySelect = document.getElementById('day');
-const resultDiv = document.getElementById('result');
+    <script>
+        const yearSelect = document.getElementById('year');
+        const monthSelect = document.getElementById('month');
+        const daySelect = document.getElementById('day');
+        const resultDiv = document.getElementById('result');
 
-// 初始化年份
-for (let y = 1920; y <= 2025; y++) {
-  const option = document.createElement('option');
-  option.value = y;
-  option.textContent = `${y}年`;
-  yearSelect.appendChild(option);
-}
+        // Populate year options
+        for (let y = 1920; y <= 2025; y++) {
+            const option = document.createElement('option');
+            option.value = y;
+            option.text = `${y}年`;
+            yearSelect.appendChild(option);
+        }
 
-// 根據年份更新月份（支援閏月）
-function updateMonths() {
-  const year = parseInt(yearSelect.value);
-  fetch('/months', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ year })
-  })
-  .then(response => response.json())
-  .then(data => {
-    monthSelect.innerHTML = '';
-    const leapMonth = data.leap_month;
-    for (let m = 1; m <= 12; m++) {
-      const option = document.createElement('option');
-      option.value = m;
-      option.textContent = `${m}月`;
-      monthSelect.appendChild(option);
-      if (m === leapMonth) {
-        const leapOption = document.createElement('option');
-        leapOption.value = `l${m}`;
-        leapOption.textContent = `閏${m}月`;
-        monthSelect.appendChild(leapOption);
-      }
-    }
-    updateDays();
-  });
-}
+        // Populate month options
+        for (let m = 1; m <= 12; m++) {
+            const option = document.createElement('option');
+            option.value = m;
+            option.text = `${m}月`;
+            monthSelect.appendChild(option);
+        }
 
-// 根據月份更新天數
-function updateDays() {
-  const year = parseInt(yearSelect.value);
-  let month = monthSelect.value;
-  if (!month) return;
-  if (month.startsWith('l')) month = parseInt(month.slice(1));
-  else month = parseInt(month);
+        // Populate day options
+        function populateDays() {
+            daySelect.innerHTML = '';
+            let daysInMonth = new Date(yearSelect.value, monthSelect.value, 0).getDate();
+            for (let d = 1; d <= daysInMonth; d++) {
+                const option = document.createElement('option');
+                option.value = d;
+                option.text = `${d}日`;
+                daySelect.appendChild(option);
+            }
+        }
 
-  const daysInMonth = new Date(year, month, 0).getDate();
-  daySelect.innerHTML = '';
-  for (let d = 1; d <= daysInMonth; d++) {
-    const option = document.createElement('option');
-    option.value = d;
-    option.textContent = `${d}日`;
-    daySelect.appendChild(option);
-  }
-}
+        yearSelect.addEventListener('change', populateDays);
+        monthSelect.addEventListener('change', populateDays);
+        populateDays(); // Initial call
 
-// 自動查詢
-function fetchLunar() {
-  const year = parseInt(yearSelect.value);
-  let monthVal = monthSelect.value;
-  if (!monthVal) return;
-  let isLeap = false;
-  if (monthVal.startsWith('l')) {
-    isLeap = true;
-    monthVal = parseInt(monthVal.slice(1));
-  } else {
-    monthVal = parseInt(monthVal);
-  }
-  const day = parseInt(daySelect.value);
+        // Auto query when any select changes
+        function fetchLunarData() {
+            const year = yearSelect.value;
+            const month = monthSelect.value;
+            const day = daySelect.value;
 
-  fetch('/convert', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ year, month: monthVal, day, is_leap: isLeap })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.lunar) {
-      resultDiv.innerHTML = `農曆：${data.lunar}<br>歲次：${data.suici}<br>生肖：${data.zodiac}`;
-    } else {
-      resultDiv.textContent = data.error || '查詢失敗';
-    }
-  })
-  .catch(() => {
-    resultDiv.textContent = '查詢失敗，請稍後再試';
-  });
-}
+            fetch('/convert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year, month, day })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = `查詢失敗：${data.error}`;
+                } else {
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = `
+                        農曆：${data.lunar}<br>
+                        歲次：${data.suici}<br>
+                        生肖：${data.zodiac}
+                    `;
+                }
+            })
+            .catch(error => {
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `錯誤：${error}`;
+            });
+        }
 
-yearSelect.addEventListener('change', () => { updateMonths(); });
-monthSelect.addEventListener('change', () => { updateDays(); fetchLunar(); });
-daySelect.addEventListener('change', fetchLunar);
+        yearSelect.addEventListener('change', fetchLunarData);
+        monthSelect.addEventListener('change', fetchLunarData);
+        daySelect.addEventListener('change', fetchLunarData);
 
-// 初始呼叫
-updateMonths();
-</script>
-
+    </script>
 </body>
 </html>
