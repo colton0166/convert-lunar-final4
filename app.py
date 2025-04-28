@@ -3,7 +3,8 @@ from zhdate import ZhDate
 import datetime
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
+
 
 zodiacs = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬']
 tiangan = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
