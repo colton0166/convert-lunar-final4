@@ -3,8 +3,7 @@ from zhdate import ZhDate
 import datetime
 import os
 
-app = Flask(__name__, static_folder='static')
-
+app = Flask(__name__)
 
 zodiacs = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬']
 tiangan = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
@@ -32,6 +31,10 @@ def lunar_day_to_chinese(day):
 def get_suici(year):
     return tiangan[(year - 4) % 10] + dizhi[(year - 4) % 12]
 
+def is_close_date(dt1, dt2, allowed_days=1):
+    delta = abs((dt1 - dt2).days)
+    return delta <= allowed_days
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -58,8 +61,8 @@ def convert():
         # 第二次：農曆轉回國曆
         back_to_solar = lunar_date.to_datetime()
 
-        # 比對原始輸入與反查的國曆
-        if (dt.year != back_to_solar.year) or (dt.month != back_to_solar.month) or (dt.day != back_to_solar.day):
+        # 比對原始輸入與反查的國曆，允許 ±1天差異
+        if not is_close_date(dt, back_to_solar, allowed_days=1):
             return jsonify({'error': '找不到對應農曆，請重新輸入'}), 400
 
         lunar_month = lunar_date.lunar_month
