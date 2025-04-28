@@ -36,21 +36,33 @@ def get_suici(year):
 def index():
     return render_template('index.html')
 
+@app.route('/months', methods=['POST'])
+def get_months():
+    year = int(request.json.get('year'))
+    try:
+        leap_month = ZhDate.lunar_leap_month(year)
+        return jsonify({'leap_month': leap_month})
+    except:
+        return jsonify({'leap_month': 0})
+
 @app.route('/convert', methods=['POST'])
 def convert():
     data = request.json
     year = int(data.get('year'))
     month = int(data.get('month'))
     day = int(data.get('day'))
-
-    if year < 1920 or year > 2025:
-        return jsonify({'error': '只支援 1920 年到 2025 年的資料！'}), 400
+    is_leap = data.get('is_leap', False)
 
     try:
-        lunar_date = ZhDate.from_datetime(datetime.datetime(year, month, day))
+        if is_leap:
+            lunar_date = ZhDate(year, month, day, leap_month=True)
+        else:
+            lunar_date = ZhDate.from_datetime(datetime.datetime(year, month, day))
 
-        # 關鍵：優先判斷是否是閏月（若不支援前程式設計）
-        month_str = f"{number_to_chinese(lunar_date.lunar_month)}月"
+        if lunar_date.lunar_month_name.startswith("閏"):
+            month_str = f"閏{number_to_chinese(lunar_date.lunar_month)}月"
+        else:
+            month_str = f"{number_to_chinese(lunar_date.lunar_month)}月"
 
         lunar_str = f"{number_to_chinese(lunar_date.lunar_year)}年{month_str}{lunar_day_to_chinese(lunar_date.lunar_day)}"
         suici = get_suici(lunar_date.lunar_year)
@@ -65,7 +77,7 @@ def convert():
         return jsonify({'lunar': lunar_str, 'suici': suici, 'zodiac': zodiac})
 
     except Exception as e:
-        return jsonify({'error': '查詢失敗，請稍後再試'}), 500
+        return jsonify({'error': '查詢失敗，請繼續嘗試'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
