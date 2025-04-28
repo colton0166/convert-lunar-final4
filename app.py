@@ -1,3 +1,4 @@
+# app.py 正式版
 from flask import Flask, render_template, request, jsonify
 from zhdate import ZhDate
 import datetime
@@ -5,17 +6,46 @@ import os
 
 app = Flask(__name__)
 
+# 立春表
+lichun_table = {
+    1920: (2, 5), 1921: (2, 4), 1922: (2, 4), 1923: (2, 5),
+    1924: (2, 5), 1925: (2, 4), 1926: (2, 4), 1927: (2, 4),
+    1928: (2, 5), 1929: (2, 4), 1930: (2, 4), 1931: (2, 4),
+    1932: (2, 5), 1933: (2, 4), 1934: (2, 4), 1935: (2, 4),
+    1936: (2, 5), 1937: (2, 4), 1938: (2, 4), 1939: (2, 4),
+    1940: (2, 5), 1941: (2, 4), 1942: (2, 4), 1943: (2, 4),
+    1944: (2, 5), 1945: (2, 4), 1946: (2, 4), 1947: (2, 4),
+    1948: (2, 5), 1949: (2, 4), 1950: (2, 4), 1951: (2, 4),
+    1952: (2, 5), 1953: (2, 4), 1954: (2, 4), 1955: (2, 4),
+    1956: (2, 5), 1957: (2, 4), 1958: (2, 4), 1959: (2, 4),
+    1960: (2, 5), 1961: (2, 4), 1962: (2, 4), 1963: (2, 4),
+    1964: (2, 5), 1965: (2, 4), 1966: (2, 4), 1967: (2, 4),
+    1968: (2, 5), 1969: (2, 4), 1970: (2, 4), 1971: (2, 4),
+    1972: (2, 5), 1973: (2, 4), 1974: (2, 4), 1975: (2, 4),
+    1976: (2, 5), 1977: (2, 4), 1978: (2, 4), 1979: (2, 4),
+    1980: (2, 5), 1981: (2, 4), 1982: (2, 4), 1983: (2, 4),
+    1984: (2, 5), 1985: (2, 4), 1986: (2, 4), 1987: (2, 4),
+    1988: (2, 4), 1989: (2, 4), 1990: (2, 4), 1991: (2, 4),
+    1992: (2, 4), 1993: (2, 4), 1994: (2, 4), 1995: (2, 4),
+    1996: (2, 4), 1997: (2, 4), 1998: (2, 4), 1999: (2, 4),
+    2000: (2, 4), 2001: (2, 4), 2002: (2, 4), 2003: (2, 4),
+    2004: (2, 4), 2005: (2, 4), 2006: (2, 4), 2007: (2, 4),
+    2008: (2, 4), 2009: (2, 4), 2010: (2, 4), 2011: (2, 4),
+    2012: (2, 4), 2013: (2, 4), 2014: (2, 4), 2015: (2, 4),
+    2016: (2, 4), 2017: (2, 4), 2018: (2, 4), 2019: (2, 4),
+    2020: (2, 4), 2021: (2, 3), 2022: (2, 4), 2023: (2, 4),
+    2024: (2, 4), 2025: (2, 3)
+}
+
 zodiacs = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬']
 tiangan = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
 dizhi = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
 digits = '〇一二三四五六七八九'
 
-lichun_table = {year: (2, 4) for year in range(1910, 2026)}
-lichun_table[2021] = (2, 3)
-lichun_table[2025] = (2, 3)
 
 def number_to_chinese(number):
     return ''.join(digits[int(d)] for d in str(number))
+
 
 def lunar_day_to_chinese(day):
     if day <= 10:
@@ -29,48 +59,39 @@ def lunar_day_to_chinese(day):
     elif day == 30:
         return "三十"
 
+
 def get_suici(year):
     return tiangan[(year - 4) % 10] + dizhi[(year - 4) % 12]
+
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/months', methods=['POST'])
-def get_months():
-    year = int(request.json.get('year'))
-    try:
-        leap_month = ZhDate.lunar_leap_month(year)
-        return jsonify({'leap_month': leap_month})
-    except Exception as e:
-        return jsonify({'leap_month': 0, 'error': str(e)})
 
 @app.route('/convert', methods=['POST'])
 def convert():
-    data = request.json
-    year = int(data.get('year'))
-    month = data.get('month')
-    day = data.get('day')
-    is_leap = data.get('is_leap', False)
-
     try:
-        if not year or not month or not day:
-            raise ValueError("日期不完整")
+        data = request.json
+        year = int(data.get('year'))
+        month = int(data.get('month'))
+        day = int(data.get('day'))
 
-        month = int(month) if isinstance(month, str) and not month.startswith('l') else int(str(month).lstrip('l'))
-        day = int(day)
+        if not (1920 <= year <= 2025):
+            return jsonify({'error': '年份不在範圍內'}), 400
+
+        lunar_date = ZhDate.from_datetime(datetime.datetime(year, month, day))
+
+        # 判斷閏月：zhdate官方現在沒內建，要自己推估
+        lunar_month = lunar_date.lunar_month
+        is_leap = lunar_date.lunar_month_name.startswith('閏') if hasattr(lunar_date, 'lunar_month_name') else False
 
         if is_leap:
-            lunar_date = ZhDate(year, month, day, leap_month=True)
+            month_str = f"閏{number_to_chinese(lunar_month)}"
         else:
-            lunar_date = ZhDate.from_datetime(datetime.datetime(year, month, day))
+            month_str = f"{number_to_chinese(lunar_month)}"
 
-        if is_leap:
-            month_str = f"閏{number_to_chinese(lunar_date.lunar_month)}月"
-        else:
-            month_str = f"{number_to_chinese(lunar_date.lunar_month)}月"
-
-        lunar_str = f"{number_to_chinese(lunar_date.lunar_year)}年{month_str}{lunar_day_to_chinese(lunar_date.lunar_day)}"
+        lunar_str = f"{number_to_chinese(lunar_date.lunar_year)}年{month_str}月{lunar_day_to_chinese(lunar_date.lunar_day)}"
         suici = get_suici(lunar_date.lunar_year)
 
         lichun_month, lichun_day = lichun_table.get(year, (2, 4))
@@ -78,12 +99,15 @@ def convert():
             zodiac_year = year - 1
         else:
             zodiac_year = year
+
         zodiac = zodiacs[(zodiac_year - 1900) % 12]
 
         return jsonify({'lunar': lunar_str, 'suici': suici, 'zodiac': zodiac})
 
     except Exception as e:
-        return jsonify({'error': f'查詢失敗：{str(e)}'}), 500
+        print("查詢失敗：", e)
+        return jsonify({'error': '查詢失敗'}), 500
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
