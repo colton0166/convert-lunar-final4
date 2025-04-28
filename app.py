@@ -42,18 +42,24 @@ def get_months():
     try:
         leap_month = ZhDate.lunar_leap_month(year)
         return jsonify({'leap_month': leap_month})
-    except:
-        return jsonify({'leap_month': 0})
+    except Exception as e:
+        return jsonify({'leap_month': 0, 'error': str(e)})
 
 @app.route('/convert', methods=['POST'])
 def convert():
     data = request.json
     year = int(data.get('year'))
-    month = int(data.get('month'))
-    day = int(data.get('day'))
+    month = data.get('month')
+    day = data.get('day')
     is_leap = data.get('is_leap', False)
 
     try:
+        if not year or not month or not day:
+            raise ValueError("日期不完整")
+
+        month = int(month) if isinstance(month, str) and not month.startswith('l') else int(str(month).lstrip('l'))
+        day = int(day)
+
         if is_leap:
             lunar_date = ZhDate(year, month, day, leap_month=True)
         else:
@@ -77,7 +83,7 @@ def convert():
         return jsonify({'lunar': lunar_str, 'suici': suici, 'zodiac': zodiac})
 
     except Exception as e:
-        return jsonify({'error': '查詢失敗，請稍後再試'}), 500
+        return jsonify({'error': f'查詢失敗：{str(e)}'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
