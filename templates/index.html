@@ -21,7 +21,7 @@
         </select>
     </div>
 
-    <div id="result" style="text-align:center; margin-top: 30px; font-size: 18px;"></div>
+    <div id="result" style="text-align:center; margin-top: 30px; font-size: 18px; color: darkgreen;"></div>
 
     <footer style="text-align:center; margin-top: 50px; font-size: 14px; color: gray;">
         由 崇益 製作 © 2025
@@ -32,7 +32,6 @@
     const monthSelect = document.getElementById('month');
     const daySelect = document.getElementById('day');
 
-    // 自動補年份、月份
     for (let y = 1910; y <= 2025; y++) {
         yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
     }
@@ -41,14 +40,12 @@
         monthSelect.innerHTML += `<option value="${m}">${m}</option>`;
     }
 
-    // 根據選的年月，更新正確的日數
     function updateDays() {
         const year = parseInt(yearSelect.value);
         const month = parseInt(monthSelect.value);
         let days = 31;
 
         if (month === 2) {
-            // 判斷是否閏年
             if ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)) {
                 days = 29;
             } else {
@@ -58,33 +55,24 @@
             days = 30;
         }
 
-        // 重建日選單
         daySelect.innerHTML = '<option value="">選擇日期</option>';
         for (let d = 1; d <= days; d++) {
             daySelect.innerHTML += `<option value="${d}">${d}</option>`;
         }
     }
 
-    // 每次變更年份或月份時，重新計算日數
-    yearSelect.addEventListener('change', () => {
-        updateDays();
-        fetchLunarDate(); // 選年也要重新查詢
-    });
-
-    monthSelect.addEventListener('change', () => {
-        updateDays();
-        fetchLunarDate(); // 選月也要重新查詢
-    });
-
-    daySelect.addEventListener('change', fetchLunarDate); // 選日即查詢
-
-    // 送出轉換請求
     function fetchLunarDate() {
         const year = yearSelect.value;
         const month = monthSelect.value;
         const day = daySelect.value;
 
         if (year && month && day) {
+            const checkDate = new Date(year, month - 1, day);
+            if (checkDate.getFullYear() != year || (checkDate.getMonth() + 1) != month || checkDate.getDate() != day) {
+                document.getElementById('result').innerHTML = "<span style='color:red;'>請選擇正確的日期！</span>";
+                return;
+            }
+
             fetch('/convert', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -95,11 +83,23 @@
                 document.getElementById('result').innerHTML = `
                     農曆：${data.lunar}<br>
                     歲次：${data.suici}<br>
-                    生肖：${data.zodiac}
+                    生肖：${data.zodiac}（以立春為界）
                 `;
             });
         }
     }
+
+    yearSelect.addEventListener('change', () => {
+        updateDays();
+        fetchLunarDate();
+    });
+
+    monthSelect.addEventListener('change', () => {
+        updateDays();
+        fetchLunarDate();
+    });
+
+    daySelect.addEventListener('change', fetchLunarDate);
     </script>
 </body>
 </html>
