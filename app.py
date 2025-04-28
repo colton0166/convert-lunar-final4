@@ -1,71 +1,105 @@
-from flask import Flask, render_template, request, jsonify
-from zhdate import ZhDate
-import datetime
-import os
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>國曆轉農曆系統</title>
+</head>
+<body>
+    <h1 style="text-align:center;">國曆轉農曆系統</h1>
 
-app = Flask(__name__)
+    <div style="text-align:center; margin-top: 20px;">
+        <select id="year">
+            <option value="">選擇年份</option>
+        </select>
 
-lichun_table = {  # ← 略，這個表你之前已經有了，直接用原本的
-    1910: (2, 4), 1911: (2, 4), 1912: (2, 5), 1913: (2, 4),
-    # ...中間省略，完整年份表
-    2025: (2, 3)
-}
+        <select id="month">
+            <option value="">選擇月份</option>
+        </select>
 
-zodiacs = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬']
-tiangan = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
-dizhi = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
-digits = '〇一二三四五六七八九'  # ← 已經改成「〇」版！
+        <select id="day">
+            <option value="">選擇日期</option>
+        </select>
+    </div>
 
-def number_to_chinese(number):
-    return ''.join(digits[int(d)] for d in str(number))
+    <div id="result" style="text-align:center; margin-top: 30px; font-size: 18px;"></div>
 
-def lunar_day_to_chinese(day):
-    if day <= 10:
-        return f"初{digits[day]}"
-    elif day < 20:
-        return f"十{digits[day % 10]}"
-    elif day == 20:
-        return "二十"
-    elif day < 30:
-        return f"廿{digits[day % 10]}"
-    elif day == 30:
-        return "三十"
+    <footer style="text-align:center; margin-top: 50px; font-size: 14px; color: gray;">
+        由 崇益 製作 © 2025
+    </footer>
 
-def get_suici(year):
-    return tiangan[(year - 4) % 10] + dizhi[(year - 4) % 12]
+    <script>
+    const yearSelect = document.getElementById('year');
+    const monthSelect = document.getElementById('month');
+    const daySelect = document.getElementById('day');
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+    for (let y = 1910; y <= 2025; y++) {
+        yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
+    }
 
-@app.route('/convert', methods=['POST'])
-def convert():
-    data = request.json
-    year = int(data.get('year'))
-    month = int(data.get('month'))
-    day = int(data.get('day'))
+    for (let m = 1; m <= 12; m++) {
+        monthSelect.innerHTML += `<option value="${m}">${m}</option>`;
+    }
 
-    lunar_date = ZhDate.from_datetime(datetime.datetime(year, month, day))
+    function updateDays() {
+        const year = parseInt(yearSelect.value);
+        const month = parseInt(monthSelect.value);
+        let days = 31;
 
-    # ✅ 新增閏月判斷
-    if lunar_date.lunar_is_leap:
-        month_str = f"閏{number_to_chinese(lunar_date.lunar_month)}月"
-    else:
-        month_str = f"{number_to_chinese(lunar_date.lunar_month)}月"
+        if (month === 2) {
+            if ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)) {
+                days = 29;
+            } else {
+                days = 28;
+            }
+        } else if ([4, 6, 9, 11].includes(month)) {
+            days = 30;
+        }
 
-    lunar_str = f"{number_to_chinese(lunar_date.lunar_year)}年{month_str}{lunar_day_to_chinese(lunar_date.lunar_day)}"
-    suici = get_suici(lunar_date.lunar_year)
+        daySelect.innerHTML = '<option value="">選擇日期</option>';
+        for (let d = 1; d <= days; d++) {
+            daySelect.innerHTML += `<option value="${d}">${d}</option>`;
+        }
+    }
 
-    lichun_month, lichun_day = lichun_table[year]
-    if (month, day) < (lichun_month, lichun_day):
-        zodiac_year = year - 1
-    else:
-        zodiac_year = year
+    function fetchLunarDate() {
+        const year = yearSelect.value;
+        const month = monthSelect.value;
+        const day = daySelect.value;
 
-    zodiac = zodiacs[(zodiac_year - 1900) % 12]
+        if (year && month && day) {
+            const checkDate = new Date(year, month - 1, day);
+            if (checkDate.getFullYear() != year || (checkDate.getMonth() + 1) != month || checkDate.getDate() != day) {
+                document.getElementById('result').innerHTML = "<span style='color:red;'>請選擇正確的日期！</span>";
+                return;
+            }
 
-    return jsonify({'lunar': lunar_str, 'suici': suici, 'zodiac': zodiac})
+            fetch('/convert', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({year, month, day})
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerHTML = `
+                    農曆：${data.lunar}<br>
+                    歲次：${data.suici}<br>
+                    生肖：${data.zodiac}
+                `;
+            });
+        }
+    }
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    yearSelect.addEventListener('change', () => {
+        updateDays();
+        fetchLunarDate();
+    });
+
+    monthSelect.addEventListener('change', () => {
+        updateDays();
+        fetchLunarDate();
+    });
+
+    daySelect.addEventListener('change', fetchLunarDate);
+    </script>
+</body>
+</html>
