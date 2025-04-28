@@ -10,17 +10,14 @@
     <div style="text-align:center; margin-top: 20px;">
         <select id="year">
             <option value="">選擇年份</option>
-            <!-- 自己插入1910~2025的年份選單（或用js自動生成也可以） -->
         </select>
 
         <select id="month">
             <option value="">選擇月份</option>
-            <!-- 自己插入1~12月 -->
         </select>
 
         <select id="day">
             <option value="">選擇日期</option>
-            <!-- 自己插入1~31日 -->
         </select>
     </div>
 
@@ -31,11 +28,11 @@
     </footer>
 
     <script>
-    // 這裡幫你自動生成年份、月份、日期
     const yearSelect = document.getElementById('year');
     const monthSelect = document.getElementById('month');
     const daySelect = document.getElementById('day');
 
+    // 自動補年份、月份
     for (let y = 1910; y <= 2025; y++) {
         yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
     }
@@ -44,10 +41,44 @@
         monthSelect.innerHTML += `<option value="${m}">${m}</option>`;
     }
 
-    for (let d = 1; d <= 31; d++) {
-        daySelect.innerHTML += `<option value="${d}">${d}</option>`;
+    // 根據選的年月，更新正確的日數
+    function updateDays() {
+        const year = parseInt(yearSelect.value);
+        const month = parseInt(monthSelect.value);
+        let days = 31;
+
+        if (month === 2) {
+            // 判斷是否閏年
+            if ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)) {
+                days = 29;
+            } else {
+                days = 28;
+            }
+        } else if ([4, 6, 9, 11].includes(month)) {
+            days = 30;
+        }
+
+        // 重建日選單
+        daySelect.innerHTML = '<option value="">選擇日期</option>';
+        for (let d = 1; d <= days; d++) {
+            daySelect.innerHTML += `<option value="${d}">${d}</option>`;
+        }
     }
 
+    // 每次變更年份或月份時，重新計算日數
+    yearSelect.addEventListener('change', () => {
+        updateDays();
+        fetchLunarDate(); // 選年也要重新查詢
+    });
+
+    monthSelect.addEventListener('change', () => {
+        updateDays();
+        fetchLunarDate(); // 選月也要重新查詢
+    });
+
+    daySelect.addEventListener('change', fetchLunarDate); // 選日即查詢
+
+    // 送出轉換請求
     function fetchLunarDate() {
         const year = yearSelect.value;
         const month = monthSelect.value;
@@ -69,10 +100,6 @@
             });
         }
     }
-
-    yearSelect.addEventListener('change', fetchLunarDate);
-    monthSelect.addEventListener('change', fetchLunarDate);
-    daySelect.addEventListener('change', fetchLunarDate);
     </script>
 </body>
 </html>
