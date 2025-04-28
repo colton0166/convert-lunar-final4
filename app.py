@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, jsonify
 from zhdate import ZhDate
 import datetime
@@ -6,13 +7,11 @@ import os
 app = Flask(__name__)
 
 zodiacs = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬']
-tiangan = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
-dizhi = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
+tiangan = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
+dizhi = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
 digits = '〇一二三四五六七八九'
-
-# 每年立春日期表
 lichun_table = {
-    1920: (2, 5), 1921: (2, 4), 1922: (2, 4), 1923: (2, 5),
+        1920: (2, 5), 1921: (2, 4), 1922: (2, 4), 1923: (2, 5),
     1924: (2, 5), 1925: (2, 4), 1926: (2, 4), 1927: (2, 4),
     1928: (2, 5), 1929: (2, 4), 1930: (2, 4), 1931: (2, 4),
     1932: (2, 5), 1933: (2, 4), 1934: (2, 4), 1935: (2, 4),
@@ -39,6 +38,7 @@ lichun_table = {
     2016: (2, 4), 2017: (2, 4), 2018: (2, 4), 2019: (2, 4),
     2020: (2, 4), 2021: (2, 3), 2022: (2, 4), 2023: (2, 4),
     2024: (2, 4), 2025: (2, 3)
+
 }
 
 def number_to_chinese(number):
@@ -71,34 +71,46 @@ def convert():
         month = int(data.get('month'))
         day = int(data.get('day'))
 
-        # 查農曆
-        lunar_date = ZhDate.from_datetime(datetime.datetime(year, month, day))
+        if not (1910 <= year <= 2025):
+            return jsonify({'error': '年份不支援'}), 400
+
+        dt = datetime.datetime(year, month, day)
+        lunar_date = None
+
+        try:
+            lunar_date = ZhDate.from_datetime(dt)
+        except:
+            try:
+                lunar_date = ZhDate.from_datetime(dt + datetime.timedelta(days=1))
+            except:
+                try:
+                    lunar_date = ZhDate.from_datetime(dt - datetime.timedelta(days=1))
+                except:
+                    return jsonify({'error': '找不到農曆對應'}), 500
+
         lunar_month = lunar_date.lunar_month
-        lunar_day = lunar_date.lunar_day
+        is_leap = getattr(lunar_date, 'lunar_leap', False)
 
-        # 判斷是不是閏月 (注意：zhdate這版要自己查)
-        is_leap_month = False
-        # 額外查「農曆月是否是閏月」，用補充表查詢，這裡暫時假設沒有(因 zhdate沒有直接提供)
-        # → 之後可升級成查天文表格版
+        if is_leap:
+            lunar_month_str = f"閏{number_to_chinese(lunar_month)}月"
+        else:
+            lunar_month_str = f"{number_to_chinese(lunar_month)}月"
 
-        lunar_month_str = f"閏{number_to_chinese(lunar_month)}月" if is_leap_month else f"{number_to_chinese(lunar_month)}月"
-        lunar_str = f"{number_to_chinese(lunar_date.lunar_year)}年{lunar_month_str}{lunar_day_to_chinese(lunar_day)}"
+        lunar_str = f"{number_to_chinese(lunar_date.lunar_year)}年{lunar_month_str}{lunar_day_to_chinese(lunar_date.lunar_day)}"
+        suici = get_suici(lunar_date.lunar_year)
 
-        # 立春換生肖
         lichun_month, lichun_day = lichun_table.get(year, (2, 4))
         if (month, day) < (lichun_month, lichun_day):
             zodiac_year = year - 1
         else:
             zodiac_year = year
-
         zodiac = zodiacs[(zodiac_year - 1900) % 12]
-        suici = get_suici(lunar_date.lunar_year)
 
         return jsonify({'lunar': lunar_str, 'suici': suici, 'zodiac': zodiac})
-    
+
     except Exception as e:
         print("查詢失敗：", e)
-        return jsonify({'error': '查詢失敗，請稍後再試'}), 500
+        return jsonify({'error': '查詢失敗'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
